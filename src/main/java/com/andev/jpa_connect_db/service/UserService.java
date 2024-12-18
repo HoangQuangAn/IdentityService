@@ -1,5 +1,6 @@
 package com.andev.jpa_connect_db.service;
 
+import com.andev.jpa_connect_db.dto.request.ApiResponse;
 import com.andev.jpa_connect_db.dto.request.UserCreationRequest;
 import com.andev.jpa_connect_db.dto.response.UserResponse;
 import com.andev.jpa_connect_db.entity.User;
@@ -12,7 +13,7 @@ import com.andev.jpa_connect_db.repository.UserRepository;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -25,8 +26,8 @@ import java.util.List;
 public class UserService {
 
     UserRepository userRepository;
-
     UserMapper userMapper;
+    PasswordEncoder passwordEncoder;
 
     public UserResponse creatUser(UserCreationRequest reObject){
 
@@ -34,16 +35,15 @@ public class UserService {
             throw new AppException(ErrorCode.USER_EXISTED);
         }
         User user = userMapper.toUser(reObject);
-        PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
         HashSet<String> roles = new HashSet<>();
-        roles.add(Role.ADMIN.name());
+        roles.add(Role.USER.name());
         user.setRoles(roles);
         user.setPassword(passwordEncoder.encode(reObject.getPassword()));
         return userMapper.toUserResponse(userRepository.save(user));
     }
 
-    public List<User> getListUser(){
-        return userRepository.findAll();
+    public ApiResponse<List<User>> getListUser(){
+        return ApiResponse.<List<User>>builder().result(userRepository.findAll()).build();
     }
 
     public UserResponse getById(String Id){

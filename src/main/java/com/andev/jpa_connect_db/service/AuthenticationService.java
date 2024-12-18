@@ -4,6 +4,7 @@ import com.andev.jpa_connect_db.dto.request.AuthenticationRequest;
 import com.andev.jpa_connect_db.dto.request.IntrospectRequest;
 import com.andev.jpa_connect_db.dto.response.AuthenticationResponse;
 import com.andev.jpa_connect_db.dto.response.IntrospectResponse;
+import com.andev.jpa_connect_db.entity.User;
 import com.andev.jpa_connect_db.exception.AppException;
 import com.andev.jpa_connect_db.exception.ErrorCode;
 import com.andev.jpa_connect_db.repository.UserRepository;
@@ -21,15 +22,18 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
 
 import java.text.ParseException;
 import java.util.Date;
+import java.util.StringJoiner;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class AuthenticationService {
+    PasswordEncoder passwordEncoder;
     UserRepository userRepository;
 
     @NonFinal
@@ -38,14 +42,12 @@ public class AuthenticationService {
 
     public AuthenticationResponse authenticate(AuthenticationRequest authenticationRequest) throws JOSEException {
         var user = userRepository.findByUsername(authenticationRequest.getUsername()).orElseThrow(()->new AppException(ErrorCode.USER_NOT_EXIST, authenticationRequest.getUsername()));
-        PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(10);
-
         boolean authenticated = passwordEncoder.matches(authenticationRequest.getPassword(), user.getPassword());
         if(!authenticated){
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
 
-        String token = genToken(user.getUsername());
+        String token = genToken(user);
 
         return AuthenticationResponse.builder()
                 .authenticated(authenticated)
@@ -53,16 +55,16 @@ public class AuthenticationService {
                 .build();
     }
 
-    private String genToken(String userName) {
+    private String genToken(User user) {
         // Xac dinh header
         JWSHeader jwsHeader = new JWSHeader(JWSAlgorithm.HS256);
         //Xac dinh payload
         JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
-                .subject(userName)
+                .subject(user.getUsername())
                 .issuer("anhq9")
                 .issueTime(new Date())
                 .expirationTime(new Date(new Date().getTime() + 1000 *60*60))
-                .claim("customClaim", "Custom")
+                .claim("roles", buildScope(user))
                 .build();
 
         Payload payload = new Payload(jwtClaimsSet.toJSONObject());
@@ -87,5 +89,13 @@ public class AuthenticationService {
         return IntrospectResponse.builder()
                 .valid(isValid && expirationTime.after(new Date()))
                 .build();
+    }
+
+    public String buildScope(User user){
+        StringJoiner stringJoiner = new StringJoiner(" ");
+        if(!CollectionUtils.isEmpty(user.getRoles())){
+           user.getRoles().forEach(stringJoiner::add);
+        }
+        return stringJoiner.toString();
     }
 }
