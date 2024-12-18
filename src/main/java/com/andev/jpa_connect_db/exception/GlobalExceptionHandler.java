@@ -13,7 +13,6 @@ public class GlobalExceptionHandler {
         ApiResponse<String> apiResponse= new ApiResponse<>();
         apiResponse.setMessage(e.getMessage());
         apiResponse.setCode(ErrorCode.UNCATEGORIZED_EXCEPTION.getCode());
-
         return ResponseEntity.badRequest().body(apiResponse);
     }
 
@@ -23,7 +22,6 @@ public class GlobalExceptionHandler {
         ApiResponse<String> apiResponse = new ApiResponse<>();
         apiResponse.setCode(9999);
         apiResponse.setMessage(exception.getFieldError().getDefaultMessage());
-
         return ResponseEntity.badRequest().body(apiResponse);
     }
 
