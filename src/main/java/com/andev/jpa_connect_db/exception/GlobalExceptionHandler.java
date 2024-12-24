@@ -6,6 +6,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
+import org.springframework.security.access.AccessDeniedException;
+
 @ControllerAdvice
 public class GlobalExceptionHandler {
     @ExceptionHandler(value = Exception.class)
@@ -27,9 +29,22 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(value = AppException.class)
     ResponseEntity<ApiResponse> globalUserNotFoundException(AppException exception){
+        ErrorCode errorCode= exception.getErrorCode();
         ApiResponse<String> apiResponse= new ApiResponse<>();
         apiResponse.setMessage(exception.getMessage());
-        apiResponse.setCode(exception.getCode());
-        return ResponseEntity.badRequest().body(apiResponse);
+        apiResponse.setCode(errorCode.getCode());
+        return ResponseEntity.status(errorCode.getHttpStatusCode()).body(apiResponse);
+    }
+
+    @ExceptionHandler(value = AccessDeniedException.class)
+    ResponseEntity<ApiResponse> globalAccessDeniedException(AccessDeniedException exception){
+        ErrorCode errorCode= ErrorCode.UNAUTHORIZED;
+        return ResponseEntity.status(errorCode.getHttpStatusCode()).body(
+                ApiResponse.builder()
+                        .code(errorCode.getCode())
+                        .message(errorCode.getMessage())
+                        .result(null)
+                        .build()
+        );
     }
 }
